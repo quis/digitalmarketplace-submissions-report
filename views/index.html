@@ -19,17 +19,6 @@
         "/api",
         function(data) {
 
-					var days = data.map(
-						function(currentValue) {
-							console.log("HALLO");
-							console.log(currentValue.name);
-							return currentValue.name;
-						}
-					);
-
-					console.log("YEAH?");
-					console.log(days);
-
           var chart = c3.generate({
             bindto: '#chart',
             data: {
@@ -44,7 +33,7 @@
               groups: [['completed', 'drafts']],
             }
           });
-            console.log(data);
+
         }
       );
     </script>

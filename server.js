@@ -1,60 +1,153 @@
 var express = require('express'),
-    routes = require(__dirname + '/app/routes.js'),
+    AWS = require('aws-sdk'),
     app = express(),
     port = (process.env.PORT || 3000),
-
 // Grab environment variables specified in Procfile or as Heroku config vars
     username = process.env.USERNAME,
     password = process.env.PASSWORD,
     env = process.env.NODE_ENV || 'development';
 
-// Authenticate against the environment-provided credentials, if running
-// the app in production (Heroku, effectively)
-if (env === 'production') {
-  if (!username || !password) {
-    console.log('Username or password is not set, exiting.');
-    process.exit(1);
-  }
-  app.use(express.basicAuth(username, password));
+if (
+  (typeof process.env.AWS_ACCESS_KEY_ID === 'undefined') ||
+  (typeof process.env.AWS_SECRET_ACCESS_KEY === 'undefined') ||
+  (typeof process.env.AWS_REGION === 'undefined')
+) {
+  console.log('ERROR: Missing S3 config');
+  process.exit(1);
 }
 
-// Application settings
-app.engine('html', require(__dirname + '/lib/template-engine.js').__express);
-app.set('view engine', 'html');
-app.set('vendorViews', __dirname + '/govuk_modules/govuk_template/views/layouts');
-app.set('views', __dirname + '/app/views');
+//AWS.config.region = process.env.AWS_REGION;
+var s3 = new AWS.S3();
 
-// Middleware to serve static assets
-app.use('/public', express.static(__dirname + '/public'));
-app.use('/public', express.static(__dirname + '/govuk_modules/govuk_template/assets'));
+app.configure(function(){
 
-// routes (found in routes.js)
+  // Authenticate against the environment-provided credentials, if running
+  // the app in production (Heroku, effectively)
+  if (env === 'production') {
+    if (!username || !password) {
+      console.log('Username or password is not set, exiting.');
+      process.exit(1);
+    }
+    app.use(express.basicAuth(username, password));
+  }
 
-var assetPath = '/public/';
+  app.use('/public', express.static(__dirname + '/public'));
+  app.use(app.router);
+  app.set('view engine', 'html');
+  app.set('views', __dirname+ '/views');
+  app.engine('html', require('hogan-express'));
 
-routes.bind(app, assetPath);
-
-// auto render any view that exists
-
-app.get(/^\/(.+)/, function (req, res) {
-
-	var path = (req.params[0]),
-      renderCallback;
-
-  console.log('path : ' + path);
-  renderCallback = function(err, html) {
-		if (err) {
-      res.render('', {'assetPath' : assetPath }, renderCallback);
-		} else {
-			res.end(html);
-		}
-	}
-	res.render(path, {'assetPath' : assetPath }, renderCallback);
 });
 
-// start the app
+app.get(
+  "/",
+  function(req, res, next) {
+
+    res.render('index');
+
+  }
+);
+
+app.get(
+  "/api",
+  function(req, res, next) {
+
+    var justTheKey = function(currentValue) {
+          return currentValue.Key;
+        },
+        deDupe = function(item, pos, self) {
+          return self.indexOf(item) == pos;
+        },
+        excludeLogs = function(item) {
+          return !item.match(/^logs\/(.*)/);
+        },
+        listingBelongsToDay = function(item) {
+          return !!item.match(new RegExp(this + '\/(.+)'));
+        },
+        getDay = function(currentValue) {
+          return currentValue.split('/')[0];
+        };
+
+    var render = function(drafts, completed){
+
+      var output = [],
+          i, days, day;
+
+      drafts = drafts.map(justTheKey).filter(excludeLogs);
+      completed = completed.map(justTheKey).filter(excludeLogs);
+      days = drafts.concat(completed).map(getDay).filter(deDupe);
+
+      for (i in days.sort()) {
+
+        day = days[i];
+
+        console.log('==================');
+        console.log(day);
+        console.log(drafts.filter(listingBelongsToDay, day));
+        console.log(completed.filter(listingBelongsToDay, day));
+
+        output.push(
+          {
+            name: day,
+            drafts: drafts.filter(listingBelongsToDay, day).length,
+            completed: completed.filter(listingBelongsToDay, day).length
+          }
+        );
+
+      }
+
+      res.json(output);
+
+    };
+
+
+    console.log('Requested: ' + req.url);
+
+    s3.listObjects(
+      {
+        Bucket: 'gds-g6-completed-listings-export',
+        EncodingType: 'url',
+        //MaxKeys: 10,
+        Marker: '/',
+      },
+      function(err, completedData) {
+
+        if (err) {
+
+          console.log(err, err.stack);
+
+        } else {
+
+          s3.listObjects(
+            {
+              Bucket: 'gds-g6-draft-listings-export',
+              EncodingType: 'url',
+              //MaxKeys: 10,
+              Marker: '/',
+            },
+            function(err, draftsData) {
+
+              if (err) {
+
+                console.log(err, err.stack);
+
+              } else {
+
+                render(draftsData.Contents, completedData.Contents);
+
+              }
+
+            }
+          );
+
+        }
+
+      }
+    );
+
+  }
+);
 
 app.listen(port);
-console.log('');
+console.log('S3 access key: ' + process.env.AWS_ACCESS_KEY_ID);
 console.log('Listening on port ' + port);
-console.log('');

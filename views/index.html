@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Submissions report</title>
+    <link rel='stylesheet' href="/public/styles/c3.css" />
+		<style type='text/css'>
+    </style>
+	</head>
+	<body>
+
+    <div id="chart">
+    </div>
+
+    <script src="//code.jquery.com/jquery-2.1.0.min.js"></script>
+    <script src="/public/scripts/d3.js"></script>
+    <script src="/public/scripts/c3.js"></script>
+    <script>
+      $.get(
+        "/api",
+        function(data) {
+
+					var days = data.map(
+						function(currentValue) {
+							console.log("HALLO");
+							console.log(currentValue.name);
+							return currentValue.name;
+						}
+					);
+
+					console.log("YEAH?");
+					console.log(days);
+
+          var chart = c3.generate({
+            bindto: '#chart',
+            data: {
+              json: data,
+              keys: {
+                value: ['completed', 'drafts'],
+              },
+              types: {
+                completed: 'area',
+                drafts: 'area'
+              },
+              groups: [['completed', 'drafts']],
+            }
+          });
+            console.log(data);
+        }
+      );
+    </script>
+
+  </body>
+</html>

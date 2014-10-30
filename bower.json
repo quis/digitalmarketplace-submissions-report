@@ -1,0 +1,15 @@
+{
+  "name": "Digital-Marketplace-Submissions-Reporting",
+  "version": "0.0.1",
+  "dependencies": {
+    "c3": "0.3.0"
+  },
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "components",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

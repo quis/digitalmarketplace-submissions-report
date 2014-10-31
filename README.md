@@ -44,6 +44,11 @@ Variable | Description
 `USERNAME` and `PASSWORD` | Required if `NODE_ENV` is set to `production`
 
 ## Run
+Generate the static assets
+```
+grunt
+```
+then
 ```
 node server.js
 ```

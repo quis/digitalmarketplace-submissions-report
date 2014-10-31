@@ -39,73 +39,68 @@ app.configure(function(){
 });
 
 
-var list = function(bucket, callback) {
-      s3.listObjects(
-        {
-          Bucket: bucket,
-          EncodingType: 'url',
-          //MaxKeys: 10,
-          Marker: '/',
-        },
-        function(err, data) {
-
-          if (err) {
-
-            console.log(err, err.stack);
-
-          } else {
-
-            callback(
-              data.Contents.map(justTheKey).filter(excludeLogs)
-            );
-
-          }
-        }
-      );
+var allResults = [],
+list = function(bucket, callback, marker) {
+  s3.listObjects(
+    {
+      Bucket: bucket,
+      EncodingType: 'url',
+      Marker: marker
     },
-    justTheKey = function(currentValue) {
-      return currentValue.Key;
-    },
-    deDupe = function(item, pos, self) {
-      return self.indexOf(item) == pos;
-    },
-    excludeLogs = function(item) {
-      return !item.match(/^logs\/(.*)/);
-    },
-    listingBelongsToDay = function(item) {
-      return item.match(new RegExp(this + '\/(.+)'));
-    },
-    getDay = function(currentValue) {
-      return currentValue.split('/')[0];
-    },
-    getSupplier = function(currentValue) {
-      return currentValue.split('/')[1];
-    },
-    formatListings = function(drafts, completed) {
+    function(err, data) {
 
-      var output = [],
-          listings = drafts.concat(completed),
-          days = listings.map(getDay).filter(deDupe).sort(),
-          i, day;
+      if (err) return;
 
-      for (i in days) {
+      allResults = allResults.concat(data.Contents);
 
-        day = days[i];
-
-        output.push(
-          {
-            day: day,
-            completed: completed.filter(listingBelongsToDay, day).length,
-            drafts: drafts.filter(listingBelongsToDay, day).length,
-            suppliers: listings.filter(listingBelongsToDay, day).map(getSupplier).filter(deDupe).length
-          }
-        );
-
+      if (data.IsTruncated) {
+        list(bucket, callback, data.Contents.slice(-1)[0].Key);
+      } else {
+        callback(allResults.map(justTheKey).filter(excludeLogs));
+        allResults = [];
       }
 
-      return output;
+    }
+  );
+},
+justTheKey = function(currentValue) {
+  return currentValue.Key;
+},
+deDupe = function(item, pos, self) {
+  return self.indexOf(item) == pos;
+},
+excludeLogs = function(item) {
+  return !item.match(/^logs\/(.*)/);
+},
+listingBelongsToDay = function(item) {
+  return item.match(new RegExp(this + '\/(.+)'));
+},
+getDay = function(currentValue) {
+  return currentValue.split('/')[0];
+},
+getSupplier = function(currentValue) {
+  return currentValue.split('/')[1];
+},
+generateOutput = function(day, index, days) {
+  return {
+    day: day,
+    completed: this.completed.filter(listingBelongsToDay, day).length,
+    drafts: this.drafts.filter(listingBelongsToDay, day).length,
+    suppliers: this.allListings.filter(listingBelongsToDay, day).map(getSupplier).filter(deDupe).length
+  };
+},
+formatListings = function(drafts, completed) {
 
-    };
+  var allListings = drafts.concat(completed),
+      days = allListings.map(getDay).filter(deDupe).sort();
+
+  return days.map(generateOutput, {
+    drafts: drafts,
+    completed: completed,
+    allListings: allListings
+  });
+
+};
 
 app.get(
   "/api",

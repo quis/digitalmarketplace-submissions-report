@@ -39,7 +39,6 @@ Variable | Description
 
 Variable | Description
 -------- | -----------
-`AWS_REGION` | Geographic region for AWS account, if specified
 `NODE_ENV` | If set to `production` this will enable basic HTTP authentication (useful when deploying to Heroku or similar)
 `USERNAME` and `PASSWORD` | Required if `NODE_ENV` is set to `production`
 

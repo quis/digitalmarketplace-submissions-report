@@ -16,7 +16,6 @@ if (
   process.exit(1);
 }
 
-//AWS.config.region = process.env.AWS_REGION;
 var s3 = new AWS.S3();
 
 app.configure(function(){

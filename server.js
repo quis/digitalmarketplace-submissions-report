@@ -39,52 +39,55 @@ app.configure(function(){
 
 });
 
-app.get(
-  "/",
-  function(req, res, next) {
 
-    res.render('index');
-
-  }
-);
-
-app.get(
-  "/api",
-  function(req, res, next) {
-
-    var justTheKey = function(currentValue) {
-          return currentValue.Key;
+var list = function(bucket, callback) {
+      s3.listObjects(
+        {
+          Bucket: bucket,
+          EncodingType: 'url',
+          //MaxKeys: 10,
+          Marker: '/',
         },
-        deDupe = function(item, pos, self) {
-          return self.indexOf(item) == pos;
-        },
-        excludeLogs = function(item) {
-          return !item.match(/^logs\/(.*)/);
-        },
-        listingBelongsToDay = function(item) {
-          return !!item.match(new RegExp(this + '\/(.+)'));
-        },
-        getDay = function(currentValue) {
-          return currentValue.split('/')[0];
-        };
+        function(err, data) {
 
-    var render = function(drafts, completed){
+          if (err) {
+
+            console.log(err, err.stack);
+
+          } else {
+
+            callback(
+              data.Contents.map(justTheKey).filter(excludeLogs)
+            );
+
+          }
+        }
+      );
+    },
+    justTheKey = function(currentValue) {
+      return currentValue.Key;
+    },
+    deDupe = function(item, pos, self) {
+      return self.indexOf(item) == pos;
+    },
+    excludeLogs = function(item) {
+      return !item.match(/^logs\/(.*)/);
+    },
+    listingBelongsToDay = function(item) {
+      return item.match(new RegExp(this + '\/(.+)'));
+    },
+    getDay = function(currentValue) {
+      return currentValue.split('/')[0];
+    },
+    formatListings = function(drafts, completed) {
 
       var output = [],
-          i, days, day;
+          days = drafts.concat(completed).map(getDay).filter(deDupe).sort(),
+          i, day;
 
-      drafts = drafts.map(justTheKey).filter(excludeLogs);
-      completed = completed.map(justTheKey).filter(excludeLogs);
-      days = drafts.concat(completed).map(getDay).filter(deDupe);
-
-      for (i in days.sort()) {
+      for (i in days) {
 
         day = days[i];
-
-        console.log('==================');
-        console.log(day);
-        console.log(drafts.filter(listingBelongsToDay, day));
-        console.log(completed.filter(listingBelongsToDay, day));
 
         output.push(
           {
@@ -96,58 +99,44 @@ app.get(
 
       }
 
-      res.json(output);
+      return output;
 
     };
 
+app.get(
+  "/api",
+  function(req, res, next) {
 
-    console.log('Requested: ' + req.url);
+    list(
+      'gds-g6-completed-listings-export',
+      function(completedData) {
+        list(
+          'gds-g6-draft-listings-export',
+          function(draftsData) {
 
-    s3.listObjects(
-      {
-        Bucket: 'gds-g6-completed-listings-export',
-        EncodingType: 'url',
-        //MaxKeys: 10,
-        Marker: '/',
-      },
-      function(err, completedData) {
+            res.json(
+              formatListings(draftsData, completedData)
+            );
 
-        if (err) {
-
-          console.log(err, err.stack);
-
-        } else {
-
-          s3.listObjects(
-            {
-              Bucket: 'gds-g6-draft-listings-export',
-              EncodingType: 'url',
-              //MaxKeys: 10,
-              Marker: '/',
-            },
-            function(err, draftsData) {
-
-              if (err) {
-
-                console.log(err, err.stack);
-
-              } else {
-
-                render(draftsData.Contents, completedData.Contents);
-
-              }
-
-            }
-          );
-
-        }
-
+          }
+        );
       }
     );
 
   }
 );
 
+app.get(
+  "/",
+  function(req, res, next) {
+
+    res.render('index');
+
+  }
+);
+
 app.listen(port);
-console.log('S3 access key: ' + process.env.AWS_ACCESS_KEY_ID);
-console.log('Listening on port ' + port);
+console.log('');
+console.log('================================================================================');
+console.log('App up, listening on port ' + port);
+console.log('--------------------------------------------------------------------------------');

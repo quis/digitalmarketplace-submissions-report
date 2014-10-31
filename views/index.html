@@ -4,6 +4,18 @@
 		<title>Submissions report</title>
     <link rel='stylesheet' href="/public/styles/c3.css" />
 		<style type='text/css'>
+			#chart .c3-line {
+			  stroke-width: 3px;
+			}
+			#chart .c3-line-suppliers {
+				stroke-width: 3px;
+			}
+			#chart {
+				max-height: 100%;
+			}
+			#chart .c3 text {
+				font-size: 19px;
+			}
     </style>
 	</head>
 	<body>
@@ -24,14 +36,32 @@
             data: {
               json: data,
               keys: {
-                value: ['completed', 'drafts'],
+								x: 'day',
+								value: ['drafts', 'completed', 'suppliers']
               },
+							labels: {
+								value: []
+							},
               types: {
-                completed: 'area',
-                drafts: 'area'
+                drafts: 'area',
+								completed: 'area',
+								suppliers: 'line'
               },
-              groups: [['completed', 'drafts']],
-            }
+              groups: [
+								['drafts', 'completed']
+							],
+            },
+						axis: {
+							x: {
+								type: 'category'
+							}
+						},
+						color: {
+							pattern: ['#96c6e2', '#2b8cc4', '#B10E1E']
+						},
+						size: {
+							height: 600
+						}
           });
 
         }

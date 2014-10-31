@@ -79,10 +79,14 @@ var list = function(bucket, callback) {
     getDay = function(currentValue) {
       return currentValue.split('/')[0];
     },
+    getSupplier = function(currentValue) {
+      return currentValue.split('/')[1];
+    },
     formatListings = function(drafts, completed) {
 
       var output = [],
-          days = drafts.concat(completed).map(getDay).filter(deDupe).sort(),
+          listings = drafts.concat(completed),
+          days = listings.map(getDay).filter(deDupe).sort(),
           i, day;
 
       for (i in days) {
@@ -91,9 +95,10 @@ var list = function(bucket, callback) {
 
         output.push(
           {
-            name: day,
+            day: day,
+            completed: completed.filter(listingBelongsToDay, day).length,
             drafts: drafts.filter(listingBelongsToDay, day).length,
-            completed: completed.filter(listingBelongsToDay, day).length
+            suppliers: listings.filter(listingBelongsToDay, day).map(getSupplier).filter(deDupe).length
           }
         );
 

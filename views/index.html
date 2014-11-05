@@ -27,45 +27,52 @@
     <script src="/public/scripts/d3.js"></script>
     <script src="/public/scripts/c3.js"></script>
     <script>
-      $.get(
-        "/api",
-        function(data) {
 
-          var chart = c3.generate({
-            bindto: '#chart',
-            data: {
-              json: data,
-              keys: {
-								x: 'day',
-								value: ['drafts', 'completed', 'suppliers']
-              },
-							labels: {
-								value: []
+			(function DMrenderChart() {
+	      $.get(
+	        "/api",
+	        function(data) {
+
+	          var chart = c3.generate({
+	            bindto: '#chart',
+	            data: {
+	              json: data,
+	              keys: {
+									x: 'day',
+									value: ['drafts', 'completed', 'suppliers']
+	              },
+								labels: {
+									value: []
+								},
+	              types: {
+	                drafts: 'area',
+									completed: 'area',
+									suppliers: 'line'
+	              },
+	              groups: [
+									['drafts', 'completed']
+								],
+	            },
+							axis: {
+								x: {
+									type: 'category'
+								}
 							},
-              types: {
-                drafts: 'area',
-								completed: 'area',
-								suppliers: 'line'
-              },
-              groups: [
-								['drafts', 'completed']
-							],
-            },
-						axis: {
-							x: {
-								type: 'category'
+							color: {
+								pattern: ['#96c6e2', '#2b8cc4', '#B10E1E']
+							},
+							size: {
+								height: 600
 							}
-						},
-						color: {
-							pattern: ['#96c6e2', '#2b8cc4', '#B10E1E']
-						},
-						size: {
-							height: 600
-						}
-          });
+	          });
 
-        }
-      );
+	        }
+	      );
+		                            // mins secs milliseconds
+				setInterval(DMrenderChart, 60 * 60 * 1000);
+
+			}());
+
     </script>
 
   </body>

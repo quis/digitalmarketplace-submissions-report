@@ -4,6 +4,35 @@
     <title>Submissions report</title>
     <link rel='stylesheet' href="/public/styles/c3.css" />
     <style type='text/css'>
+      #console {
+        font-family: monospace;
+        background: #fff;
+        color: #444;
+        font-size: 24px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        padding: 1em;
+        box-sizing: border-box;
+        z-index: 1;
+      }
+      #console span {
+        color: #a18;
+      }
+      #console em {
+        animation-name: blinker;
+        animation-duration: 1s;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        font-style: normal;
+      }
+      #chart {
+        background: #fff;
+        position: relative;
+        z-index: 2;
+      }
       #chart .c3-line {
         stroke-width: 3px;
       }
@@ -16,12 +45,18 @@
       #chart .c3 text {
         font-size: 19px;
       }
+      @keyframes blinker {
+        0% { opacity: 1.0; }
+        50% { opacity: 0.0; }
+        100% { opacity: 1.0; }
+      }
     </style>
   </head>
   <body>
 
+    <div id="console">
+    </div>
     <div id="chart">
-      <img src="http://cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif" />
     </div>
 
     <script src="//code.jquery.com/jquery-2.1.0.min.js"></script>
@@ -29,53 +64,144 @@
     <script src="/public/scripts/c3.js"></script>
     <script>
 
-      (function DMrenderChart() {
+      var allResults = [];
+
+      function getListings(bucket, marker, callback) {
+
+        $("#console").html(
+          "Fetching from <span>" + bucket + "</span> at <span>" + (marker ? marker.split("/")[0] : "start") + "</span><em>…</em>"
+        );
+
         $.get(
           "/api",
+          {
+            bucket: bucket,
+            marker: marker
+          },
           function(data) {
 
-            $('#chart').remove();
-            $('body').prepend('<div id="chart" />');
+            allResults = allResults.concat(data.Contents);
 
-            var chart = c3.generate({
-              bindto: '#chart',
-              data: {
-                json: data,
-                keys: {
-                  x: 'day',
-                  value: ['drafts', 'completed', 'suppliers']
-                },
-                labels: {
-                  value: []
-                },
-                types: {
-                  drafts: 'area',
-                  completed: 'area',
-                  suppliers: 'line'
-                },
-                groups: [
-                  ['drafts', 'completed']
-                ],
-              },
-              axis: {
-                x: {
-                  type: 'category'
-                }
-              },
-              color: {
-                pattern: ['#96c6e2', '#2b8cc4', '#B10E1E']
-              },
-              size: {
-                height: 600
-              }
-            });
+            if (data.IsTruncated) {
+              getListings(bucket, data.Contents.slice(-1)[0].Key, callback);
+            } else {
+              callback(allResults.map(justTheKey).filter(excludeLogs));
+              allResults = [];
+              console.log("All listings fetched");
+            }
 
           }
         );
-                                // mins secs milliseconds
-        setInterval(DMrenderChart, 60 * 60 * 1000);
 
-      }());
+      }
+
+      function justTheKey(currentValue) {
+        return currentValue.Key;
+      }
+      function deDupe(item, pos, self) {
+        return self.indexOf(item) == pos;
+      }
+      function excludeLogs(item) {
+        return !item.match(/^logs\/(.*)/);
+      }
+      function listingBelongsToDay(item) {
+        return item.match(new RegExp(this + '\/(.+)'));
+      }
+      function getDay(currentValue) {
+        return currentValue.split('/')[0];
+      }
+      function getSupplier(currentValue) {
+        return currentValue.split('/')[1];
+      }
+      function generateOutput(day, index, days) {
+        return {
+          day: day,
+          completed: this.completed.filter(listingBelongsToDay, day).length,
+          drafts: this.drafts.filter(listingBelongsToDay, day).length,
+          suppliers: this.allListings.filter(listingBelongsToDay, day).map(getSupplier).filter(deDupe).length
+        };
+      }
+      function formatListings(drafts, completed) {
+
+        var allListings = drafts.concat(completed),
+        days = allListings.map(getDay).filter(deDupe).sort();
+
+        return days.map(generateOutput, {
+          drafts: drafts,
+          completed: completed,
+          allListings: allListings
+        });
+
+      }
+
+      function renderChart(data) {
+
+        $('#chart').remove();
+        $('body').prepend('<div id="chart" />');
+
+        console.log(data);
+
+        var chart = c3.generate({
+          bindto: '#chart',
+          data: {
+            json: data,
+            keys: {
+              x: 'day',
+              value: ['drafts', 'completed', 'suppliers']
+            },
+            labels: {
+              value: []
+            },
+            types: {
+              drafts: 'area',
+              completed: 'area',
+              suppliers: 'line'
+            },
+            groups: [
+            ['drafts', 'completed']
+            ],
+          },
+          axis: {
+            x: {
+              type: 'category'
+            }
+          },
+          color: {
+            pattern: ['#96c6e2', '#2b8cc4', '#B10E1E']
+          },
+          size: {
+            height: 600
+          }
+        });
+
+        // mins secs milliseconds
+        // setInterval(DMrenderChart, 60 * 60 * 1000);
+
+      }
+
+      getListings(
+        'gds-g6-completed-listings-export',
+        undefined,
+        function(completedData) {
+          getListings(
+            'gds-g6-draft-listings-export',
+            undefined,
+            function(draftsData) {
+
+              renderChart(
+                formatListings(draftsData, completedData)
+              );
+
+            }
+          );
+        }
+      );
+
+      function blinker() {
+        $('#console em').toggle();
+      }
+
+      setInterval(blinker, 1000);
 
     </script>
 

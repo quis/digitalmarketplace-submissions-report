@@ -38,87 +38,20 @@ app.configure(function(){
 
 });
 
-
-var allResults = [],
-list = function(bucket, callback, marker) {
-  s3.listObjects(
-    {
-      Bucket: bucket,
-      EncodingType: 'url',
-      Marker: marker
-    },
-    function(err, data) {
-
-      if (err) return;
-
-      allResults = allResults.concat(data.Contents);
-
-      if (data.IsTruncated) {
-        list(bucket, callback, data.Contents.slice(-1)[0].Key);
-      } else {
-        callback(allResults.map(justTheKey).filter(excludeLogs));
-        allResults = [];
-      }
-
-    }
-  );
-},
-justTheKey = function(currentValue) {
-  return currentValue.Key;
-},
-deDupe = function(item, pos, self) {
-  return self.indexOf(item) == pos;
-},
-excludeLogs = function(item) {
-  return !item.match(/^logs\/(.*)/);
-},
-listingBelongsToDay = function(item) {
-  return item.match(new RegExp(this + '\/(.+)'));
-},
-getDay = function(currentValue) {
-  return currentValue.split('/')[0];
-},
-getSupplier = function(currentValue) {
-  return currentValue.split('/')[1];
-},
-generateOutput = function(day, index, days) {
-  return {
-    day: day,
-    completed: this.completed.filter(listingBelongsToDay, day).length,
-    drafts: this.drafts.filter(listingBelongsToDay, day).length,
-    suppliers: this.allListings.filter(listingBelongsToDay, day).map(getSupplier).filter(deDupe).length
-  };
-},
-formatListings = function(drafts, completed) {
-
-  var allListings = drafts.concat(completed),
-      days = allListings.map(getDay).filter(deDupe).sort();
-
-  return days.map(generateOutput, {
-    drafts: drafts,
-    completed: completed,
-    allListings: allListings
-  });
-
-};
-
 app.get(
   "/api",
   function(req, res, next) {
 
-    list(
-      'gds-g6-completed-listings-export',
-      function(completedData) {
-        list(
-          'gds-g6-draft-listings-export',
-          function(draftsData) {
+    console.log(req.query);
 
-            res.json(
-              formatListings(draftsData, completedData)
-            );
-
-          }
-        );
+    s3.listObjects(
+      {
+        Bucket: req.query.bucket,
+        EncodingType: 'url',
+        Marker: req.query.marker
+      },
+      function(err, data) {
+        res.json(data);
       }
     );
 

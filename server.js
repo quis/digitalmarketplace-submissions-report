@@ -42,8 +42,6 @@ app.get(
   "/api",
   function(req, res, next) {
 
-    console.log(req.query);
-
     s3.listObjects(
       {
         Bucket: req.query.bucket,

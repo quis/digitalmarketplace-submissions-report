@@ -6,20 +6,21 @@
     <style type='text/css'>
       #console {
         font-family: monospace;
-        background: #fff;
-        color: #444;
+        background: rgba(0, 0, 0, 0.8);
+        color: #ddd;
         font-size: 24px;
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
-        height: 100%;
-        padding: 1em;
         box-sizing: border-box;
-        z-index: 1;
+        z-index: 2;
+      }
+      #console div {
+        padding: 1em;
       }
       #console span {
-        color: #a18;
+        color: #f7d;
       }
       #console em {
         animation-name: blinker;
@@ -69,7 +70,7 @@
       function getListings(bucket, marker, callback) {
 
         $("#console").html(
-          "Fetching from <span>" + bucket + "</span> at <span>" + (marker ? marker.split("/")[0] : "start") + "</span><em>…</em>"
+          "<div>Fetching from <span>" + bucket + "</span> at <span>" + (marker ? marker.split("/")[0] : "start") + "</span><em>…</em></div>"
         );
 
         $.get(
@@ -138,8 +139,7 @@
 
         $('#chart').remove();
         $('body').prepend('<div id="chart" />');
-
-        console.log(data);
+        $('#console').html('');
 
         var chart = c3.generate({
           bindto: '#chart',
@@ -174,28 +174,35 @@
           }
         });
 
-        // mins secs milliseconds
-        // setInterval(DMrenderChart, 60 * 60 * 1000);
-
       }
 
-      getListings(
-        'gds-g6-completed-listings-export',
-        undefined,
-        function(completedData) {
-          getListings(
-            'gds-g6-draft-listings-export',
-            undefined,
-            function(draftsData) {
+      (function init() {
 
-              renderChart(
-                formatListings(draftsData, completedData)
-              );
+        console.log('init');
 
-            }
-          );
-        }
-      );
+        getListings(
+          'gds-g6-completed-listings-export',
+          undefined,
+          function(completedData) {
+            getListings(
+              'gds-g6-draft-listings-export',
+              undefined,
+              function(draftsData) {
+
+                renderChart(
+                  formatListings(draftsData, completedData)
+                );
+
+              }
+            );
+          }
+        );
+
+                      //  mins secs milliseconds
+        setInterval(init, 60 * 60 * 1000);
+
+      })();
+
 
       function blinker() {
         $('#console em').toggle();

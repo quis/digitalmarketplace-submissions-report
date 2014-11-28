@@ -68,7 +68,7 @@
       function getListings(bucket, marker, callback) {
 
         $("#console").html(
-          "<div>Fetching from <span>" + bucket + "</span> at <span>" + (marker ? marker.split("/")[0] : "start") + "</span><em>…</em></div>"
+          "<div>Fetching from <span>" + bucket.replace("gds-g6-", "").replace("-export", "").replace("-", " ") + "</span> at <span>" + (marker ? marker.split("/")[0] : "start") + "</span><em>…</em></div>"
         );
 
         $.get(

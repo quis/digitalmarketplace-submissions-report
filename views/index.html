@@ -63,7 +63,7 @@
     <script src="/public/scripts/c3.js"></script>
     <script>
 
-      var allResults = [];
+      var allResults = [], chart;
 
       function getListings(bucket, marker, callback) {
 
@@ -86,7 +86,6 @@
             } else {
               callback(allResults.map(justTheKey).filter(excludeLogs));
               allResults = [];
-              console.log("All listings fetched");
             }
 
           }
@@ -135,11 +134,12 @@
 
       function renderChart(data) {
 
+        $('#console').html('');
+        chart.destroy();
         $('#chart').remove();
         $('body').prepend('<div id="chart" />');
-        $('#console').html('');
 
-        var chart = c3.generate({
+        chart = c3.generate({
           bindto: '#chart',
           data: {
             json: data,
@@ -175,8 +175,6 @@
       }
 
       (function init() {
-
-        console.log('init');
 
         getListings(
           'gds-g6-completed-listings-export',

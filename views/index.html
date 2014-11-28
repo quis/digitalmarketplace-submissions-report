@@ -135,7 +135,9 @@
       function renderChart(data) {
 
         $('#console').html('');
-        chart.destroy();
+        if (chart) {
+          chart.destroy();
+        }
         $('#chart').remove();
         $('body').prepend('<div id="chart" />');
 

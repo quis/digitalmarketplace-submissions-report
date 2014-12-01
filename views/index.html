@@ -134,6 +134,7 @@
 
       function renderChart(data) {
 
+        $('#console').html('');
         $('body').prepend('<div id="chart" />');
 
         chart = c3.generate({
@@ -174,7 +175,6 @@
       (function init() {
 
         allResults = [];
-        $('#console').html('');
         if (chart) {
           chart.destroy();
           chart = undefined;

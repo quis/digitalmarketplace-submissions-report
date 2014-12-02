@@ -199,11 +199,12 @@
           }
         );
 
-                      //  mins secs milliseconds
-        setInterval(init, 60 * 60 * 1000);
-
       })();
 
+      //  mins secs milliseconds
+      setInterval(function() {
+        location.reload();
+      }, 60 * 60 * 1000);
 
       function blinker() {
         $('#console em').toggle();
